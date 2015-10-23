@@ -1,3 +1,5 @@
+
+
 #####################################
 ### Probabilistic Machine Learning 
 ### Fall, 2015
@@ -7,4 +9,6 @@
 
 # setwd('/Users/sophie/Documents/Data')
 # 
+
+source('../setup.R')
 
