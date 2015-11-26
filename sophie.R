@@ -164,45 +164,37 @@ for(i in 1:length(newvar)){
 
 
 
+
+
+##### Step 2: (Pre-Treatment II) stem words & remove special characters & stop words etc. #####
+
+nv<-newvar
+vector<-c("\n","?","http\\S+\\s*",") -",";","??","???","]") #things you want to remove
+
+for(i in 1:length(vector)){
+  nv=str_replace_all(nv,vector[i],"")
+}
+
+
+# to lower case -> remove stop words -> stem words
+for(i in 1:length(nv)){
+text<-nv[i]
+
+vc<-VCorpus(VectorSource(text))  
+  vc<-tm_map(vc, content_transformer(tolower))  
+  vc<-tm_map(vc, removeWords, stopwords("english"))  
+  vc<-tm_map(vc, stemDocument)
+coerced<-as.String(vc[[1]]$content)
+newvar[i]<-as.character(coerced)
+}
+
+
+
 data=cbind(data,newvar)
 
 
 
-
-##### Step 2: (Pre-Treatment II) stem words & get rid of special characters etc. #####
-
-# icews$text = str_replace_all(icews$text,"\\?\\???","") %>% # rid of question marks
-#    str_replace_all("[","") %>%  # rid of [Desciption of source: ...]
-#    str_replace_all("(","") %>% # rid of (2500 chrts; jjbd1031a)
-#   str_replace_all("]","") %>%  # rid of [Desciption of source: ...]
-#   str_replace_all(")","") %>% # rid of (2500 chrts; jjbd1031a)  
-#    str_replace_all("http\\S+\\s*", "") %>%  # rid of http
-#    str_replace_all("Attachments:", "") %>%  # we need sentences
-#   str_replace_all("Guangzhou$", "") %>%
-#   str_replace_all("?", "") %>%
-#   str_replace_all("\n\n.*pdf$", " ") %>% # get rid of ending with pdf
-#   str_replace_all("\n\nsai.*?$", "") %>% # row 26, 68
-#   str_replace_all("\n\nbur.*?$", "") %>% # row 589 -> \n\nbur/slb/dwa
-#   str_replace_all(".com","") %>%
-#   str_replace_all("Apr.", "April") %>% # row632
-#    str_replace_all("\\$|\\=|\\(|\\)|-|--|'|\"|\\.\\.\\.|_|______|_____|:|\\*", " ")  # rid of symbols (always the last)
-
-### need to run the parse_sentences function below first
-# df <- list()
-# 
-# for (i in 1:642){
-#   text=icews$text[i]
-#   df[[i]] <- parse_sentences(icews$text[i])
-#   # Anhui (human: Zhejiang, because workers from Anhui protested in Zhejing province)
-#   print(i)
-# }
-# 
-# View(df[[11]])
-# icrews.df = lapply(df, as.data.frame())
-# write.csv(icrews.df, file = "/Users/howardliu/dropbox/Chinese NLP project/Data/icewslists.csv")
-
-
-
+################ do not run below this line yet ##############
 
 ##### STEP 2: Run NLP -> LDA -> NLP ####
 test<-parse_sentences(newvar[4])
@@ -219,6 +211,8 @@ testdata<-as.data.frame(terms(gibbs, 10))
 # run NLP -> then get the number of location identifiers, N
 
 # k = n, extract LDA matrices  -> run NLP again for actors 
+
+
 
 # 
 # treat text -- base formn words
