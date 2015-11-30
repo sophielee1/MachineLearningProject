@@ -11,6 +11,7 @@ library(tidyr) #spread function in the parse_sentences function
 library(stringr) #string matching
 library(tm) #stem words, etc.
 library(magrittr)
+library(topicmodels)
 
 
 ##### Load data ####
@@ -18,7 +19,6 @@ library(magrittr)
 icews <- read.csv(paste0(base.path, "/all_protest_from2001_2014_20151111.csv"))
 icews$headline = as.character(icews$headline)
 icews$text = as.character(icews$text)
-
 
 
 ##### helper function ####
@@ -101,6 +101,20 @@ pipeline <- list(sent_token_annotator,word_token_annotator, pos_tag_annotator, #
                  date_ann)
 
 
+GetCorpus <-function(textVector)
+{
+  doc.corpus <- Corpus(VectorSource(textVector))
+  doc.corpus <- tm_map(doc.corpus, tolower)
+  doc.corpus <- tm_map(doc.corpus, removeNumbers)
+  doc.corpus <- tm_map(doc.corpus, removePunctuation)
+  doc.corpus <- tm_map(doc.corpus, removeWords, stopwords("english"))
+  doc.corpus <- tm_map(doc.corpus, stemDocument, "english")
+  doc.corpus <- tm_map(doc.corpus, stripWhitespace)
+  doc.corpus <- tm_map(doc.corpus, PlainTextDocument)  
+  return(doc.corpus)
+}
+
+
 ##### STEP 1: (Pre-treatment I) Cut out the parts citing sources ####
 
 
@@ -113,6 +127,7 @@ sources<-c("AFP","Reuters","AP","in Chinese", "web site")#stopwords
 indicators<-c("Description of","Source")
 
 data=icews
+
 
 newvar<-rep(NA, nrow(data))
 # names(newvar)<-"newvar"
@@ -190,34 +205,189 @@ newvar[i]<-as.character(coerced)
 
 
 
-data=cbind(data,newvar)
+data=cbind(data,nv)
 
 
 
 ################ do not run below this line yet ##############
 
 ##### STEP 2: Run NLP -> LDA -> NLP ####
-test<-parse_sentences(newvar[4])
 
-# delete China
-#get k
+### set up
 
-string<-GetCorpus(newvar[4])
-dtm<-DocumentTermMatrix(string)
+# space to search
+newvar=tolower(data$nv)
+# list of province names to search for
+names=as.vector(as.character(unique(data$province_ICEWS))) #provinces
+remove<-c("Sheng","Shi","Autonomous Region","Zizhiqu")
+for(i in 1:length(remove)){
+names<-str_replace_all(names,remove[i],"") 
+}
+names=names[!is.na(names)]
+names=c(names,"Hong Kong","Taiwan")
+names[13]<-"Xinjiang"
+names[26]<-"Inner Mongolia"
+names[21]<-"Guangxi"
+names<-str_trim(names)
+names<-tolower(names)
 
-testfinal<-parse_sentences(testdata[,1])
-testdata<-as.data.frame(terms(gibbs, 10))
+#list of actor types to search for
+# types=as.vector(as.character(unique(data$)))
+types<-c("protest", "citizen", "worker",	"employee","farmer","teacher")
+# farmers	Farm Worker
+# teachers	Education
+# residents	citizens
+# operators	
+# villagers	
+# coal miners	
+# migrant Workers	Immigrants
+# Tibetans	
+# students	
+# military men	
+# rioters	
+# rights activist	
+# petitioners	
+# doctors	Medical Personnel
+# Muslims	
+# Buddhist monks	
+# thugs	Criminal
+# mob	
+# fishermen	
+# furniture makers	Business
+# investors	
+
+# parameters for LDA
+SEED=2015
+burn=100
+odens=100
+sims=100
+grams=1:2
+
+
+# data_original=data
+# write.csv(data_original, "Chinese_nlp_treated_data_sophie.csv")
+
+data=data[1:15,]
+
+province_machine=rep(NA, nrow(data))
+actor_machine=rep(NA, nrow(data))
+
+for(i in 1:nrow(data)){
+
+# search 
+TF<-str_detect(newvar[i], names)
+if(length(which(TF==TRUE))>1){
+  locations<-names[which(TF==TRUE)]
+k=length(locations)
+
+#stem words
+text<-newvar[i]
+vc<-VCorpus(VectorSource(text))  
+vc<-tm_map(vc, content_transformer(tolower))  
+vc<-tm_map(vc, removeWords, stopwords("english"))  
+vc<-tm_map(vc, stemDocument)
+coerced<-as.String(vc[[1]]$content)
+
+#LDA
+dtm<-GetCorpus(coerced)
+dtm<-DocumentTermMatrix(dtm)
+gibbs=LDA(dtm, k=k, method="Gibbs",
+          control=list(seed=SEED, burnin=burn, thin=odens, iter=sims))
+freqwords<-terms(gibbs, 10)
+
+for(j in 1:k){
+  for(r in 1:10){
+  TF<-str_detect(freqwords[r,j], types)
+  if(length(which(TF==TRUE))>0){
+    answer<-types[which(TF==TRUE)]
+  } else{
+    answer<-NA
+  }
+  }
+}
+
+
+
+}else{
+  locations=NA
+}
+
+province_machine[i]<-as.String(locations)
+actor_machine[i]<-as.String(answer)
+
+
+}
+
+
+#comparison
+province_machine
+data$province_ICEWS[1:15]
+data$province_human[1:15]
+
+
+# 
+# 
+# # delete China
+# #get k
+# 
+# count_names(for i in 1:length(nrow(data))){
+#   test<-parse_sentences(newvar[i])
+#   
+# }
+# 
+# nlp=list()
+# for(i in 1:length(data$newvar))
+#   nlp[[i]]<-
+#   lll<-parse_sentences(newvar[i]) # to data frame
+# 
+# 
+# view(nlp[[i]])
+# string<-GetCorpus(newvar[7])
+# dtm<-DocumentTermMatrix(string)
+
+# testfinal<-parse_sentences(testdata[,1])
+# testdata<-as.data.frame(terms(gibbs, 10))
 
 # run NLP -> then get the number of location identifiers, N
-
-# k = n, extract LDA matrices  -> run NLP again for actors 
 
 
 
 # 
-# treat text -- base formn words
-# cluster
-
-
-
+# 
+# 
+# 
+# gibbs=LDA(dtm, k=k, method="Gibbs",
+#           control=list(seed=SEED, burnin=burn, thin=odens, iter=sims))
+# df=rbind(dtm[[3]],dtm[[6]][2])
+# 
+# df<-DocumentTermMatrix(df)
+# freqwords<-findFreqTerms(dtm, 3)
+# 
+# 
+# 
+# freqency=sort(dtm[[3]], decreasing=T)
+# frequentest<-dtm[[6]][[2]][order(dtm[[3]], decreasing=T)]
+# 
+# wordcloud(frequentest, freqency, 
+#           max.words=30, scale=c(3.5, .5), use.r.layout=F)
+# 
+# #The top 5 terms under the 10 topics are here
+# terms(gibbs, 10)
+# 
+# 
+# 
+# actors_dic<-unique(data$source_actor)
+# 
+# 
+# 
+# # k = n, extract LDA matrices  -> run NLP again for actors 
+# 
+# 
+# 
+# # 
+# # treat text -- base formn words
+# # cluster
+# 
+# 
+# 
 
