@@ -100,7 +100,7 @@ pipeline <- list(sent_token_annotator,word_token_annotator, pos_tag_annotator, #
                  organization_ann, # org nouns
                  date_ann)
 
-
+# text into corpora
 GetCorpus <-function(textVector)
 {
   doc.corpus <- Corpus(VectorSource(textVector))
@@ -115,8 +115,21 @@ GetCorpus <-function(textVector)
 }
 
 
-##### STEP 1: (Pre-treatment I) Cut out the parts citing sources ####
+# scoring function for comparison statustics at the end
 
+score<-function(youranswer, solution){
+  total=0
+  for(i in 1:length(youranswer)){
+    # test<-strsplit(as.character(youranswer[i])," ")
+    # binary<-agrep(test[[1]], as.character(solution[i]), ignore.case = TRUE, max=5)
+    binary<-agrep(as.character(solution[i]), as.character(youranswer[i]), ignore.case = TRUE, max=2)  
+    total<-as.numeric(sum(total,binary))
+  }
+  return(total/length(youranswer))
+}
+
+
+##### STEP 1: (Pre-treatment I) Cut out the parts citing sources ####
 
 
 
@@ -206,12 +219,13 @@ newvar[i]<-as.character(coerced)
 
 
 data=cbind(data,nv)
+write.csv(data, "Chinese_nlp_treated_data_sophie.csv")
 
 
 
-################ do not run below this line yet ##############
 
-##### STEP 2: Run NLP -> LDA -> NLP ####
+
+##### STEP 2: search for provinces & actors ####
 
 ### set up
 
@@ -232,8 +246,17 @@ names<-str_trim(names)
 names<-tolower(names)
 
 #list of actor types to search for
-# types=as.vector(as.character(unique(data$)))
-types<-c("protest", "citizen", "worker",	"employee","farmer","teacher")
+types=as.character(unique(data$source_actor))
+types<-str_replace(types,"\\(.*?\\)","")
+types<-str_trim(types)
+types<-tolower(types)
+
+for(i in 1:length(types)){
+obj<-strsplit(as.character(types[i])," ")
+types[i]<-as.character(obj[[1]][1])
+}
+
+# types<-c("protest", "citizen", "worker",	"employee","farmer","teacher")
 # farmers	Farm Worker
 # teachers	Education
 # residents	citizens
@@ -264,13 +287,13 @@ sims=100
 grams=1:2
 
 
-# data_original=data
-# write.csv(data_original, "Chinese_nlp_treated_data_sophie.csv")
-
+###!!!! if you want run the sample case for quick trial run the line below
 data=data[1:15,]
+
 
 province_machine=rep(NA, nrow(data))
 actor_machine=rep(NA, nrow(data))
+
 
 for(i in 1:nrow(data)){
 
@@ -293,19 +316,32 @@ dtm<-GetCorpus(coerced)
 dtm<-DocumentTermMatrix(dtm)
 gibbs=LDA(dtm, k=k, method="Gibbs",
           control=list(seed=SEED, burnin=burn, thin=odens, iter=sims))
-freqwords<-terms(gibbs, 10)
+freqwords<-terms(gibbs, 20)
 
-for(j in 1:k){
-  for(r in 1:10){
+answer=matrix(NA,nrow=nrow(freqwords),ncol=ncol(freqwords))
+
+for(j in 1:k){  #number of topics
+actors=matrix(data=NA, ncol=k, nrow=1)
+  
+  for(r in 1:10){  # number of rows in the freqwords table
   TF<-str_detect(freqwords[r,j], types)
-  if(length(which(TF==TRUE))>0){
-    answer<-types[which(TF==TRUE)]
+      
+      if(length(which(TF==TRUE))>0){
+       answer[r,j]<-as.character(as.String(types[which(TF==TRUE)]))
+       } else{
+       answer[r,j]<-NA
+       }
+    
+   }
+ 
+  if(length(which(!is.na(answer[,j])==TRUE))>0){
+    no<-min(which(!is.na(answer[,j])==TRUE))
+    actors[1,j]<-answer[no,j]
   } else{
-    answer<-NA
+    actors[1,j]<-NA
   }
-  }
+  
 }
-
 
 
 }else{
@@ -313,16 +349,42 @@ for(j in 1:k){
 }
 
 province_machine[i]<-as.String(locations)
-actor_machine[i]<-as.String(answer)
-
-
+province_machine<-str_replace_all(province_machine,"\n"," ")
+province_machine<-str_replace_all(province_machine,"NA","")
+actor_machine[i]<-as.String(actors)
+actor_machine<-str_replace_all(actor_machine,"\n","")
+actor_machine<-str_replace_all(actor_machine,"NA","")
 }
 
 
+
 #comparison
-province_machine
-data$province_ICEWS[1:15]
-data$province_human[1:15]
+
+
+score(province_machine, data$province_human)
+score(data$province_ICEWS, data$province_human)
+
+actor_ICEWS<-str_replace(data$source_actor,"\\(.*?\\)","")
+actor_ICEWS<-str_trim(actor_ICEWS)
+actor_ICEWS<-tolower(actor_ICEWS)
+
+for(i in 1:length(actor_ICEWS)){
+  obj<-strsplit(as.character(actor_ICEWS[i])," ")
+  actor_ICEWS[i]<-as.character(obj[[1]][1])
+}
+
+score(actor_machine, actor_ICEWS)
+
+
+data_new=as.data.frame(cbind(data, province_machine, actor_machine, actor_ICEWS))
+write.csv(data_new, "Sophie_1201_data.csv")
+##### STEP 3: Plotting ####
+
+
+
+
+
+
 
 
 # 
