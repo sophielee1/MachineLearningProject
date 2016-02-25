@@ -133,7 +133,7 @@ GetCorpus <-function(textVector)
 }
 
 
-# scoring function for comparison statustics at the end
+# scoring function for comparison statistics at the end
 
 score<-function(youranswer, solution){
   total=0
@@ -155,7 +155,7 @@ score<-function(youranswer, solution){
 
 #1. remove the parts that contain the location of news reporting agencies
 sources<-c("AFP","Reuters","AP","in Chinese", "web site")#stopwords
-#2. remove the last sentence if it contains the word "source:"
+#2. remove the last sentence if it contains the following phrases
 indicators<-c("Description of","Source")
 
 data=icews
@@ -167,7 +167,7 @@ for(i in 1:length(newvar)){
   sentences<- parse_sentences(data$text[i]) 
   cell<-sentences[1,ncol(sentences)]
   
-  ## IF
+  ## IF condition 1
   TF<-str_detect(cell,sources)
   if(length(which(TF==TRUE))>0){
     no<-which(TF==TRUE)
@@ -179,11 +179,11 @@ for(i in 1:length(newvar)){
     newcell<-split[[1]][2]
     sentences[1,ncol(sentences)]<-newcell
   }
-  ### End of IF 1
+  ### End of IF condition 1
   
   
   
-  ## IF 2
+  ## IF condition 2
   
   cell<-sentences[nrow(sentences),ncol(sentences)]
   TF<-str_detect(cell,indicators)
@@ -202,7 +202,7 @@ for(i in 1:length(newvar)){
     sentences[nrow(sentences),ncol(sentences)]<-newcell
   }
   
-  ## End of IF 2
+  ## End of IF condition 2
 #   sentences=sentences[1:nrow(sentences)-1,]
   
   coerced<-as.String(sentences[,ncol(sentences)])
@@ -245,6 +245,9 @@ write.csv(data, "Chinese_nlp_treated_data_sophie.csv")
 
 
 ##### STEP 3: search for provinces & actors ####
+
+
+
 
 ### set up
 
@@ -306,7 +309,7 @@ sims=100
 grams=1:2
 
 
-###!!!! if you want run the sample case for quick trial run the line below
+###!!!! if you want to run the sample case for quick trial, run the line below. Otherwise, skip it
 data=data[1:15,]
 
 
@@ -588,7 +591,15 @@ legend(
   bty="n",x.intersp = .5, y.intersp = .5, cex=0.9)
 
 
-
+write.csv(data, "NLP_firstalgorithm.csv")
 
 
 ########## End of the codes
+
+
+
+
+
+
+
+
