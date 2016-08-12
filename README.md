@@ -11,7 +11,7 @@
 <br>
 <br>
 <br>
-<p>Author: Haohan Chen, Sophie Lee, and Howard Liu.<br>
+<p>Author: Haohan Chen, Sophie Lee, and Howard Liu. (alphabetical order)<br>
 Department of Political Science<br>
 Duke University</p>
 <br>
